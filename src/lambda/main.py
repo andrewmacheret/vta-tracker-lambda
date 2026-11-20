@@ -1,4 +1,5 @@
 import json
+import math
 import os
 import sqlite3
 import time
@@ -113,8 +114,18 @@ def vehicles_at(db, services, seconds):
       "rail": route_type in (0, 1, 2),
       "lat": round(lat1 + (lat2 - lat1) * progress, 6),
       "lon": round(lon1 + (lon2 - lon1) * progress, 6),
+      "bearing": bearing(lat1, lon1, lat2, lon2),
     })
   return vehicles
+
+
+def bearing(lat1, lon1, lat2, lon2):
+  """Compass degrees from the first point to the second (0 is north, 90 is east)."""
+  if (lat1, lon1) == (lat2, lon2):
+    return None
+  # Longitude degrees get shorter away from the equator
+  east = (lon2 - lon1) * math.cos(math.radians((lat1 + lat2) / 2))
+  return round(math.degrees(math.atan2(east, lat2 - lat1))) % 360
 
 
 def find_vehicles(db, now):
