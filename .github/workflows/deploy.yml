@@ -1,0 +1,77 @@
+name: Test and deploy
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  FUNCTION_NAME: VTATracker
+  RUNTIME: python3.14
+  DB_BUCKET: andrewmacheret-vta-tracker
+  S3_PATH: s3://andrewmacheret.com/projects/vta-tracker
+  API_URL: https://vta-tracker.andrewmacheret.com
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.14'
+      - run: python3 -m unittest -v
+        working-directory: src/lambda
+
+  deploy:
+    needs: test
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+      - run: zip -j lambda.zip src/lambda/main.py src/lambda/gtfs.py
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+      # AWS blocks code updates on old runtimes, so set the runtime first
+      - name: Update runtime and settings
+        run: |
+          aws lambda update-function-configuration --function-name "$FUNCTION_NAME" \
+            --runtime "$RUNTIME" --handler main.lambda_handler --timeout 60 --memory-size 512 \
+            --environment "Variables={DB_BUCKET=$DB_BUCKET}" \
+            --output text --query LastUpdateStatus
+          aws lambda wait function-updated --function-name "$FUNCTION_NAME"
+      - name: Update code
+        run: |
+          aws lambda update-function-code --function-name "$FUNCTION_NAME" \
+            --zip-file fileb://lambda.zip \
+            --output text --query LastUpdateStatus
+          aws lambda wait function-updated --function-name "$FUNCTION_NAME"
+      # Rebuild the timetable database now, in case gtfs.py changed. A daily schedule also does this.
+      - name: Rebuild database
+        run: |
+          aws lambda invoke --function-name "$FUNCTION_NAME" \
+            --cli-binary-format raw-in-base64-out --payload '{"refresh": true, "force": true}' \
+            --cli-read-timeout 120 refresh.json \
+            --query FunctionError --output text | tee function-error.txt
+          cat refresh.json
+          grep -qx None function-error.txt
+      # Everything under projects/vta-tracker comes from this repo, so --delete is safe
+      - name: Upload website
+        run: aws s3 sync www "$S3_PATH" --delete --cache-control 'no-cache'
+      - name: Invalidate CloudFront cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id "${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}" \
+            --paths '/projects/vta-tracker/*'
+      - name: Smoke test
+        run: |
+          curl -sSf "$API_URL/vehicles" | jq -e '(.vehicles | type == "array") and .feed.version'
