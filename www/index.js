@@ -23,8 +23,19 @@ function vehicleIcon(v) {
   span.textContent = v.label;
   span.style.background = v.color;
   span.style.color = v.text_color;
+  let arrow = '';
+  if (v.bearing !== null && v.bearing !== undefined) {
+    // Only the arrow turns, so the label stays readable.
+    // Push it out to just past the label's edge, which is further for wide labels and sideways arrows.
+    const halfWidth = v.label.length * (v.rail ? 4 : 3.5) + 10;
+    const halfHeight = 13;
+    const angle = v.bearing * Math.PI / 180;
+    const distance = Math.round(1 / Math.hypot(Math.sin(angle) / halfWidth, Math.cos(angle) / halfHeight)) + 8;
+    arrow = `<i class="arrow" style="--distance: ${distance}px; transform: rotate(${v.bearing}deg); ` +
+      `border-bottom-color: ${v.color}"></i>`;
+  }
   // iconSize null lets the label size itself
-  return L.divIcon({ className: v.rail ? 'vehicle rail' : 'vehicle', html: span.outerHTML, iconSize: null });
+  return L.divIcon({ className: v.rail ? 'vehicle rail' : 'vehicle', html: arrow + span.outerHTML, iconSize: null });
 }
 
 function tooltip(v) {
@@ -38,10 +49,15 @@ function showVehicles(data) {
     const marker = markers.get(v.trip_id);
     if (marker) {
       marker.setLatLng([v.lat, v.lon]);
+      if (marker.bearing !== v.bearing) {
+        marker.setIcon(vehicleIcon(v));
+        marker.bearing = v.bearing;
+      }
     } else {
       const created = L.marker([v.lat, v.lon], { icon: vehicleIcon(v), zIndexOffset: v.rail ? 1000 : 0 })
         .bindTooltip(tooltip(v))
         .addTo(map);
+      created.bearing = v.bearing;
       markers.set(v.trip_id, created);
     }
   }

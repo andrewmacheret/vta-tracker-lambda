@@ -45,6 +45,21 @@ body {
   white-space: nowrap;
 }
 
+/* A triangle that orbits the vehicle's position, pointing the way it's going */
+.vehicle .arrow {
+  position: absolute;
+  left: -5px;
+  top: calc(-1 * var(--distance));
+  width: 0;
+  height: 0;
+  border: 5px solid transparent;
+  border-bottom: 8px solid;
+  border-top-width: 0;
+  /* Turn around the vehicle's position, not the triangle's own center */
+  transform-origin: 5px var(--distance);
+  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.8));
+}
+
 .vehicle.rail span {
   border-radius: 3px;
   border-width: 2px;

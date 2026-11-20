@@ -101,6 +101,13 @@ class TestFindVehicles(FeedTestCase):
     vehicles = self.trips_at("2026-11-20T08:11:00")
     self.assertEqual((vehicles["T1"]["lat"], vehicles["T1"]["lon"]), (37.0, -121.9))
 
+  def test_bearing(self):
+    # A -> B heads east, then B -> C heads north
+    self.assertEqual(self.trips_at("2026-11-20T08:05:00")["T1"]["bearing"], 90)
+    self.assertEqual(self.trips_at("2026-11-20T08:15:00")["T1"]["bearing"], 0)
+    self.assertEqual(main.bearing(37.1, -121.9, 37.0, -122.0), 219)
+    self.assertIsNone(main.bearing(37.0, -122.0, 37.0, -122.0))
+
   def test_before_and_after_trip(self):
     self.assertEqual(self.trips_at("2026-11-20T07:59:59"), {})
     self.assertEqual(self.trips_at("2026-11-20T08:20:00"), {})
