@@ -1,38 +1,4 @@
-/* Same look as the cube, Monty Hall, NHL and no-drone-zones pages, with a light version for light mode */
-
-:root {
-  color-scheme: light dark;
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  --panel: rgb(15 23 42 / 0.82);
-  --text: #e2e8f0;
-  --bright: #f1f5f9;
-  --muted: #94a3b8;
-  --border: rgb(255 255 255 / 0.1);
-  --shadow: 0 20px 50px rgb(0 0 0 / 0.35), inset 0 1px 0 rgb(255 255 255 / 0.06);
-  --link: #c4b5fd;
-  --link-hover: #ddd6fe;
-  --focus: #a5b4fc;
-  --error: #fff1f2;
-  --error-bg: rgb(220 38 38 / 0.55);
-  --error-border: rgb(248 113 113 / 0.8);
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    --panel: rgb(255 255 255 / 0.88);
-    --text: #334155;
-    --bright: #0f172a;
-    --muted: #64748b;
-    --border: rgb(15 23 42 / 0.08);
-    --shadow: 0 20px 50px rgb(15 23 42 / 0.15), inset 0 1px 0 rgb(255 255 255 / 0.8);
-    --link: #6d28d9;
-    --link-hover: #7c3aed;
-    --focus: #6366f1;
-    --error: #7f1d1d;
-    --error-bg: rgb(220 38 38 / 0.15);
-    --error-border: rgb(220 38 38 / 0.6);
-  }
-}
+/* Colors, the panel look, the error box and the footer come from https://andrewmacheret.com/projects.css */
 
 html, body, #map {
   height: 100%;
@@ -40,7 +6,6 @@ html, body, #map {
 }
 
 body {
-  font-size: 14px;
   line-height: 1.4;
 }
 
@@ -50,48 +15,13 @@ body {
   top: 12px;
   left: 56px;
   width: min(320px, calc(100vw - 68px));
-  box-sizing: border-box;
   padding: 12px 16px;
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  background: var(--panel);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  box-shadow: var(--shadow);
-  color: var(--text);
 }
 
-#status h1 {
-  margin: 0;
-  font-size: 18px;
-  color: var(--bright);
-}
-
-#status p {
-  margin: 6px 0 0;
-}
-
-#status-text {
+#status-text:not(.alert),
+details p {
+  margin-top: 6px;
   color: var(--muted);
-}
-
-#status-text.error {
-  position: relative;
-  margin-top: 10px;
-  padding: 10px 12px 10px 38px;
-  border: 1px solid var(--error-border);
-  border-radius: 10px;
-  background: var(--error-bg);
-  color: var(--error);
-  font-weight: 600;
-}
-
-#status-text.error::before {
-  content: '\26A0';
-  position: absolute;
-  left: 12px;
-  top: 8px;
-  font-size: 18px;
 }
 
 details {
@@ -100,22 +30,7 @@ details {
 }
 
 summary {
-  cursor: pointer;
   color: var(--muted);
-}
-
-#status a {
-  color: var(--link);
-}
-
-#status a:hover {
-  color: var(--link-hover);
-}
-
-summary:focus-visible,
-#status a:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 2px;
 }
 
 /* Center the label on the vehicle's position */
