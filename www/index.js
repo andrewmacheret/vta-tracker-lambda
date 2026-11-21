@@ -78,7 +78,7 @@ function showStatus(data) {
   const time = new Date(data.time).toLocaleTimeString();
   const count = data.vehicles.length;
   if (feedEnded(data.feed, data.time)) {
-    statusText.className = 'error';
+    statusText.className = 'alert';
     statusText.textContent = `The timetable ran out on ${data.feed.end_date}. Waiting for VTA to publish a new one.`;
   } else {
     statusText.className = '';
@@ -98,7 +98,7 @@ async function refresh() {
     showVehicles(data);
     showStatus(data);
   } catch (error) {
-    statusText.className = 'error';
+    statusText.className = 'alert';
     statusText.textContent = `Could not load vehicles: ${error.message}`;
   }
 }
