@@ -1,6 +1,6 @@
 # vta-tracker-lambda
 
-[![License](https://img.shields.io/badge/license-MIT-lightgray.svg)](https://github.com/andrewmacheret/vta-tracker-lambda/blob/master/LICENSE.md)
+[![Test and deploy](https://github.com/andrewmacheret/vta-tracker-lambda/actions/workflows/deploy.yml/badge.svg)](https://github.com/andrewmacheret/vta-tracker-lambda/actions/workflows/deploy.yml) [![License](https://img.shields.io/badge/license-MIT-lightgray.svg)](https://github.com/andrewmacheret/vta-tracker-lambda/blob/master/LICENSE.md)
 
 Shows where [VTA](https://www.vta.org/) buses and light rail trains should be right now. It reads VTA's published timetable ([GTFS](https://gtfs.vta.org/)) and estimates each vehicle's position between its last stop and its next stop. These are timetable estimates, not live GPS.
 
