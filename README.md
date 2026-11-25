@@ -22,7 +22,7 @@ To try the page locally, serve `www/` (for example `python3 -m http.server -d ww
 
 ## Health check
 
-[`/projects/vta-tracker/healthcheck/`](https://andrewmacheret.com/projects/vta-tracker/healthcheck/) checks the page and its scripts and styles (including Leaflet), OpenStreetMap's tiles, and the API's `/healthcheck`, which fails if the daily timetable refresh failed or didn't run, or the timetable has expired. The Canary workflow (`.github/workflows/canary.yml`) opens it once a day, started by [andrewmacheret/canary](https://github.com/andrewmacheret/canary).
+Once a day, the Canary workflow (`.github/workflows/canary.yml`) checks the page and its scripts and styles (including Leaflet), OpenStreetMap's tiles, and the API's own health check, which fails if the daily timetable refresh failed or didn't run, or the timetable has expired. It's started by [andrewmacheret/canary](https://github.com/andrewmacheret/canary).
 
 ## Deploy
 
