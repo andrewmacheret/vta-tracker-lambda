@@ -19,6 +19,10 @@ DB_KEY = "gtfs-v1.sqlite"
 LOCAL_DB = "/tmp/gtfs.sqlite"
 # How often a warm Lambda checks S3 for a newer database
 CHECK_SECONDS = 600
+# How the last daily refresh went, for /healthcheck
+STATUS_KEY = "status.json"
+# The refresh runs once a day, so anything older means it missed a day
+STATUS_MAX_HOURS = 26
 
 HEADERS = {"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"}
 
@@ -30,9 +34,11 @@ _db_checked_at = 0
 def lambda_handler(event, context):
   # The daily schedule sends {"refresh": true}. API Gateway events never have that key.
   if event.get("refresh"):
-    return refresh(force=bool(event.get("force")))
+    return refresh_and_save_status(force=bool(event.get("force")))
 
   path = event.get("rawPath", "/")
+  if path == "/healthcheck":
+    return healthcheck()
   if path != "/vehicles":
     return response(404, {"errors": [f"Not found: {path}. Try /vehicles"]})
 
@@ -170,6 +176,72 @@ def get_db():
     _db_etag = etag
   _db_checked_at = time.time()
   return _db
+
+
+def refresh_and_save_status(force=False):
+  try:
+    result = refresh(force=force)
+  except Exception as ex:
+    save_status({"ok": False, "error": str(ex)})
+    raise
+  save_status({"ok": True, **result})
+  return result
+
+
+def save_status(status):
+  import boto3
+  status = {**status, "checked_at": datetime.now(timezone.utc).isoformat()}
+  boto3.client("s3").put_object(Bucket=DB_BUCKET, Key=STATUS_KEY, Body=json.dumps(status),
+                                ContentType="application/json")
+
+
+def load_status():
+  import boto3
+  return json.loads(boto3.client("s3").get_object(Bucket=DB_BUCKET, Key=STATUS_KEY)["Body"].read())
+
+
+def healthcheck(now=None):
+  """GET /healthcheck, for the daily canary (github.com/andrewmacheret/canary).
+  It's public, so it reads how the last refresh went instead of downloading the feed again."""
+  now = now or datetime.now(timezone.utc)
+  checks = [
+    run_check("Daily timetable refresh", lambda: refresh_status(now)),
+    run_check("Timetable", lambda: timetable_status(now)),
+  ]
+  ok = all(c["ok"] for c in checks)
+  return {
+    "statusCode": 200 if ok else 503,
+    "headers": {**HEADERS, "Cache-Control": "no-store"},
+    "body": json.dumps({"status": "ok" if ok else "fail", "checks": checks}),
+  }
+
+
+def run_check(name, check):
+  try:
+    return {"name": name, "ok": True, "detail": check()}
+  except Exception as ex:
+    return {"name": name, "ok": False, "detail": str(ex)}
+
+
+def refresh_status(now):
+  try:
+    status = load_status()
+  except Exception as ex:
+    raise RuntimeError(f"couldn't read {STATUS_KEY}: {ex}")
+  hours = (now - datetime.fromisoformat(status["checked_at"])).total_seconds() / 3600
+  if not status["ok"]:
+    raise RuntimeError(f"failed {hours:.0f} hours ago: {status['error']}")
+  if hours > STATUS_MAX_HOURS:
+    raise RuntimeError(f"last ran {hours:.0f} hours ago")
+  return f"ran {hours:.0f} hours ago, {'downloaded a new feed' if status.get('updated') else 'feed unchanged'}"
+
+
+def timetable_status(now):
+  version, start_date, end_date = get_db().execute("select version, start_date, end_date from feed_info").fetchone()
+  # Past its end date, no buses or trains show up
+  if end_date < now.astimezone(PACIFIC).strftime("%Y%m%d"):
+    raise RuntimeError(f"feed {version} ended on {end_date}")
+  return f"feed {version}, runs through {end_date}"
 
 
 def refresh(force=False):

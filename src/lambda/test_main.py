@@ -173,10 +173,65 @@ class TestHandler(FeedTestCase):
       status, body = self.call("/vehicles")
     self.assertEqual((status, body), (500, {"errors": ["boom"]}))
 
+  @mock.patch("main.save_status")
   @mock.patch("main.refresh", return_value={"updated": True})
-  def test_refresh_event(self, refresh):
+  def test_refresh_event(self, refresh, save_status):
     self.assertEqual(main.lambda_handler({"refresh": True, "force": True}, {}), {"updated": True})
     refresh.assert_called_once_with(force=True)
+    save_status.assert_called_once_with({"ok": True, "updated": True})
+
+  @mock.patch("main.save_status")
+  @mock.patch("main.refresh", side_effect=Exception("VTA is down"))
+  def test_failed_refresh_saves_the_error(self, _, save_status):
+    with self.assertRaises(Exception):
+      main.lambda_handler({"refresh": True}, {})
+    save_status.assert_called_once_with({"ok": False, "error": "VTA is down"})
+
+
+class TestHealthcheck(FeedTestCase):
+  NOW = at("2026-11-20T08:00:00")
+
+  def setUp(self):
+    patcher = mock.patch("main.get_db", return_value=self.db)
+    patcher.start()
+    self.addCleanup(patcher.stop)
+
+  def check(self, status, now=NOW):
+    with mock.patch("main.load_status", return_value=status):
+      result = main.healthcheck(now)
+    return result["statusCode"], json.loads(result["body"])
+
+  def ran(self, hours_ago):
+    return (self.NOW - timedelta(hours=hours_ago)).isoformat()
+
+  def test_ok(self):
+    status, body = self.check({"ok": True, "updated": False, "checked_at": self.ran(3)})
+    self.assertEqual(status, 200)
+    self.assertEqual(body["status"], "ok")
+    self.assertEqual([c["detail"] for c in body["checks"]],
+                     ["ran 3 hours ago, feed unchanged", "feed test, runs through 20261231"])
+
+  def test_failed_refresh(self):
+    status, body = self.check({"ok": False, "error": "HTTP Error 503", "checked_at": self.ran(3)})
+    self.assertEqual(status, 503)
+    self.assertEqual(body["checks"][0]["detail"], "failed 3 hours ago: HTTP Error 503")
+
+  def test_missed_a_day(self):
+    status, body = self.check({"ok": True, "checked_at": self.ran(30)})
+    self.assertEqual(status, 503)
+    self.assertEqual(body["checks"][0]["detail"], "last ran 30 hours ago")
+
+  def test_feed_ended(self):
+    status, body = self.check({"ok": True, "checked_at": self.ran(3)}, now=at("2027-01-02T08:00:00"))
+    self.assertEqual(status, 503)
+    self.assertEqual(body["checks"][1]["detail"], "feed test ended on 20261231")
+
+  def test_through_the_handler(self):
+    with mock.patch("main.load_status", side_effect=Exception("AccessDenied")):
+      result = main.lambda_handler({"rawPath": "/healthcheck"}, {})
+    self.assertEqual(result["statusCode"], 503)
+    self.assertEqual(result["headers"]["Cache-Control"], "no-store")
+    self.assertEqual(json.loads(result["body"])["checks"][0]["detail"], "couldn't read status.json: AccessDenied")
 
 
 class TestRealFeed(unittest.TestCase):

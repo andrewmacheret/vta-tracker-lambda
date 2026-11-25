@@ -1,6 +1,6 @@
 # vta-tracker-lambda
 
-[![Test and deploy](https://github.com/andrewmacheret/vta-tracker-lambda/actions/workflows/deploy.yml/badge.svg)](https://github.com/andrewmacheret/vta-tracker-lambda/actions/workflows/deploy.yml) [![License](https://img.shields.io/badge/license-MIT-lightgray.svg)](https://github.com/andrewmacheret/vta-tracker-lambda/blob/master/LICENSE.md)
+[![Test and deploy](https://github.com/andrewmacheret/vta-tracker-lambda/actions/workflows/deploy.yml/badge.svg)](https://github.com/andrewmacheret/vta-tracker-lambda/actions/workflows/deploy.yml) [![Canary](https://github.com/andrewmacheret/vta-tracker-lambda/actions/workflows/canary.yml/badge.svg)](https://github.com/andrewmacheret/vta-tracker-lambda/actions/workflows/canary.yml) [![License](https://img.shields.io/badge/license-MIT-lightgray.svg)](https://github.com/andrewmacheret/vta-tracker-lambda/blob/master/LICENSE.md)
 
 Shows where [VTA](https://www.vta.org/) buses and light rail trains should be right now. It reads VTA's published timetable ([GTFS](https://gtfs.vta.org/)) and estimates each vehicle's position between its last stop and its next stop. These are timetable estimates, not live GPS.
 
@@ -19,6 +19,10 @@ See it running at [andrewmacheret.com/projects/vta-tracker](https://andrewmacher
 Run tests with `cd src/lambda && python3 -m unittest` (needs Python 3.14). One test downloads the real VTA feed.
 
 To try the page locally, serve `www/` (for example `python3 -m http.server -d www`) and open it with `?api=<your API URL>`.
+
+## Health check
+
+[`/projects/vta-tracker/healthcheck/`](https://andrewmacheret.com/projects/vta-tracker/healthcheck/) checks the page and its scripts and styles (including Leaflet), OpenStreetMap's tiles, and the API's `/healthcheck`, which fails if the daily timetable refresh failed or didn't run, or the timetable has expired. The Canary workflow (`.github/workflows/canary.yml`) opens it once a day, started by [andrewmacheret/canary](https://github.com/andrewmacheret/canary).
 
 ## Deploy
 
