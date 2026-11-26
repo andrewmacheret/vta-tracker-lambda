@@ -9,7 +9,7 @@ See it running at [andrewmacheret.com/projects/vta-tracker](https://andrewmacher
 ## How it works
 
 - `www/` is the web page. It uses [Leaflet](https://leafletjs.com/) with [OpenStreetMap](https://www.openstreetmap.org/) tiles and asks the API for vehicles every 15 seconds.
-- `src/lambda/` is a Python AWS Lambda called `VTATracker`, behind API Gateway at `vta-tracker.andrewmacheret.com`.
+- `src/lambda/` is a Python AWS Lambda called `VTATracker`, behind API Gateway at `vta-tracker.andrewmacheret.com`. API Gateway handles CORS and only allows `https://andrewmacheret.com` and `http://localhost:8000`.
   - `GET /vehicles` returns the estimated vehicles. Add `?time=2026-11-20T08:00:00` to see another time (Pacific time unless the value has an offset).
   - When called with `{"refresh": true}`, it downloads VTA's GTFS zip, turns it into a SQLite file with `gtfs.py`, and saves it to the private S3 bucket `andrewmacheret-vta-tracker`. It skips the rebuild if VTA's file hasn't changed, unless `"force": true` is passed. An EventBridge rule sends this once a day.
   - API requests download that SQLite file to `/tmp` and check S3 for a newer copy every 10 minutes.

@@ -24,7 +24,12 @@ STATUS_KEY = "status.json"
 # The refresh runs once a day, so anything older means it missed a day
 STATUS_MAX_HOURS = 26
 
-HEADERS = {"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"}
+# API Gateway adds Access-Control-Allow-Origin for andrewmacheret.com and localhost:8000 only
+HEADERS = {
+  "Content-Type": "application/json",
+  # Keeps Google from listing the API in search results
+  "X-Robots-Tag": "noindex",
+}
 
 _db = None
 _db_etag = None

@@ -147,6 +147,7 @@ class TestHandler(FeedTestCase):
     event = {"rawPath": path, "queryStringParameters": {"time": time} if time else None}
     result = main.lambda_handler(event, {})
     self.assertEqual(result["headers"], main.HEADERS)
+    self.assertEqual(result["headers"]["X-Robots-Tag"], "noindex")
     return result["statusCode"], json.loads(result["body"])
 
   def test_vehicles(self):
